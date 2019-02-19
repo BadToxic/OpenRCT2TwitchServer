@@ -4,80 +4,89 @@ var Client;
 const ParameterLogin = 'login';
 const ParameterId = 'id';
 
+// File that stores all twitch accounts that should be ignored
+const blacklistUsers = require('../config/blacklistUsers.json');
+
 /**
  * Initialises the API functionality.
  * @param {*} AClient The client for Twitch connection.
  */
-exports.Initialise = function (AClient)
-{
+exports.Initialise = function (AClient) {
     Client = AClient;
 };
 
-exports.GetChatters = function (AChannel, ACallback)
-{
-    Client.api({ url: 'http://tmi.twitch.tv/group/user/' + AChannel.Name + '/chatters' }, function(Err, Res, Body)
-        {
-            if (Err != null || Body == undefined)
-                ACallback(true);
-            else
-                ACallback(false, Body.chatters, Body.chatter_count);
-        }
-    );
+exports.GetChatters = function (AChannel, ACallback) {
+    Client.api({ url: 'http://tmi.twitch.tv/group/user/' + AChannel.Name + '/chatters' }, function(Err, Res, Body) {
+		if (Err != null || Body == undefined) {
+			ACallback(true);
+		} else {
+			filteredViewers = [];
+			filterCount = 0;
+			Body.chatters.viewers.forEach((viewer) => {
+				// console.log('Checking viewer: ', viewer);
+				if (blacklistUsers.indexOf(viewer) === -1) {
+					filteredViewers.push(viewer);
+				} else {
+					filterCount++;
+					console.log('Filtered blacklisted user: ', viewer);
+				}
+			});
+			Body.chatters.viewers = filteredViewers;
+			Body.chatter_count -= filterCount;
+			
+			ACallback(false, Body.chatters, Body.chatter_count);
+		}
+	});
 };
 
-exports.GetFollowers = function (AChannel, ACallback)
-{
+exports.GetFollowers = function (AChannel, ACallback) {
     const MaxElements = 100;
 
     let Pagination = '';
-    if (AChannel.Pagination != '')
+    if (AChannel.Pagination != '') {
         Pagination = '&after=' + AChannel.Pagination;
+	}
 
     Client.api({
         url: 'https://api.twitch.tv/helix/users/follows?to_id=' + AChannel.Id + '&first=' + MaxElements + Pagination,
         headers: {
             'Client-ID': Config.ClientID
         }
-    }, function (Err, Res, Body)
-        {
-            if (Err == null && Body != undefined && Body.data != undefined && Body.data.length > 0)
-            {
-                let IdList = new Array(Body.data.length);
+    }, function (Err, Res, Body) {
+		if (Err == null && Body != undefined && Body.data != undefined && Body.data.length > 0) {
+			let IdList = new Array(Body.data.length);
 
-                for (i = 0; i < IdList.length; i++)
-                    IdList[i] = Body.data[i]['from_id'];
+			for (i = 0; i < IdList.length; i++) {
+				IdList[i] = Body.data[i]['from_id'];
+			}
 
-                //Set next pagination. When we hit the end, reset.
-                AChannel.Pagination = (IdList.length == MaxElements ? Body.pagination.cursor : '');
+			// Set next pagination. When we hit the end, reset.
+			AChannel.Pagination = (IdList.length == MaxElements ? Body.pagination.cursor : '');
 
-                IdsToLogins(IdList, ACallback);
-            }
-            else
-                ACallback(true);
-        }
-    );
+			IdsToLogins(IdList, ACallback);
+		} else {
+			ACallback(true);
+		}
+	});
 };
 
 exports.LoginsToIds = LoginsToIds;
 exports.IdsToLogins = IdsToLogins;
 
-function LoginsToIds (ALogins, ACallback)
-{
+function LoginsToIds (ALogins, ACallback) {
     GetLoginOrId(ALogins, ParameterLogin, ACallback);
 }
-function IdsToLogins (AIds, ACallback)
-{
+function IdsToLogins (AIds, ACallback) {
     GetLoginOrId(AIds, ParameterId, ACallback);
 }
 
-function GetLoginOrId (ALoginOrIdList, AParameterString, ACallback)
-{
-    //Combine the list to a parameter string for the GET request:
+function GetLoginOrId (ALoginOrIdList, AParameterString, ACallback) {
+    // Combine the list to a parameter string for the GET request:
     let CombinedParameterString = '';
-    for (let i = 0; i < ALoginOrIdList.length; i++)
-    {
-        if (i > 0)
+    for (let i = 0; i < ALoginOrIdList.length; i++) {
+        if (i > 0) {
             CombinedParameterString += '&';
+		}
 
         CombinedParameterString += AParameterString + '=' + ALoginOrIdList[i];
     }
@@ -90,18 +99,15 @@ function GetLoginOrId (ALoginOrIdList, AParameterString, ACallback)
         headers: {
             'Client-ID': Config.ClientID
         }
-    }, function (Err, Res, Body)
-        {
-            if (Err == null && Body != undefined && Body.data != undefined && Body.data.length > 0)
-            {
-                let ResultList = new Array(Body.data.length);
-                for (let i = 0; i < ResultList.length; i++)
-                    ResultList[i] = Body.data[i][ResultParameterString];
+    }, function (Err, Res, Body) {
+		if (Err == null && Body != undefined && Body.data != undefined && Body.data.length > 0) {
+			let ResultList = new Array(Body.data.length);
+			for (let i = 0; i < ResultList.length; i++)
+				ResultList[i] = Body.data[i][ResultParameterString];
 
-                ACallback(false, ResultList);
-            }
-            else
-                ACallback(true);
-        }
-    );
+			ACallback(false, ResultList);
+		} else {
+			ACallback(true);
+		}
+	});
 }

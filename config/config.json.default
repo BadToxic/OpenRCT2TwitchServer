@@ -3,5 +3,9 @@
 	"OAuth": "oauth:xxx",
 	"ClientID": "abc",
 	"Port": 11780,
-	"MaxMessageCount": 10
+	"MaxMessageCount": 10,
+	"NewsCommand": "!news",
+	"deliverAllMessages": false,
+	"hostTimeout": 30000,
+	"logEveryFunction": false
 }
