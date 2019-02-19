@@ -48,7 +48,7 @@ A list in json format of twitch users that should be ignored and not appear in t
 
 ### Configurations:
 
-# NewsCommand: String to listen for to deliver the message as news ingame
-# deliverAllMessages: true: Send all messages as ingame news (ignoring the set command; default: `!news`)
-# hostTimeout: time in ms before removing a RTC game host from the hosts list that receive ingame messages
-# logEveryFunction: true: logs calling the main functions
+* NewsCommand: String to listen for to deliver the message as news ingame
+* deliverAllMessages: true: Send all messages as ingame news (ignoring the set command; default: `!news`)
+* hostTimeout: time in ms before removing a RTC game host from the hosts list that receive ingame messages
+* logEveryFunction: true: logs calling the main functions
